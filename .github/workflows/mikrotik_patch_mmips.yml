@@ -70,6 +70,7 @@ jobs:
       MIKRO_LICENSE_PUBLIC_KEY: ${{ secrets.MIKRO_LICENSE_PUBLIC_KEY }}
       MIKRO_NPK_SIGN_PUBLIC_LKEY: ${{ secrets.MIKRO_NPK_SIGN_PUBLIC_LKEY }}
       MIKRO_LICENCE_URL: ${{ secrets.MIKRO_LICENCE_URL }}
+      CUSTOM_LICENCE_URL: ${{ secrets.CUSTOM_LICENCE_URL }}
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
