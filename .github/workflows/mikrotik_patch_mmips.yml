@@ -58,67 +58,44 @@ jobs:
       with:
         python-version: '3.11' 
 
-    - name: Get latest routeros version
-      id: get_latest
+
+
+    - name: Get latest routeros version  
       run: |
         echo $(uname -a)
-        LATEST_VERSION=$(wget -nv -O - https://${{ env.MIKRO_UPGRADE_URL }}/routeros/NEWESTa7.${{ matrix.channel }} | cut -d ' ' -f1)
+        if [ "${{ inputs.version }}" == "" ]; then
+          LATEST_VERSION=$(wget -nv -O - ${{ env.LATEST_VERSION_URL }}${{ matrix.channel }} | cut -d ' ' -f1)
+        else
+          LATEST_VERSION=${{ inputs.version }}
+        fi
         echo Latest Version:$LATEST_VERSION
-        if [ "${{ github.event_name }}" == "schedule" ]; then
-          _LATEST_VERSION=$(wget -nv -O - https://${{ env.CUSTOM_UPGRADE_URL }}/routeros/NEWESTa7.${{ matrix.channel }} | cut -d ' ' -f1)
-          if [ "$_LATEST_VERSION" == "$LATEST_VERSION" ]; then
-            echo "No new version found"
-            echo "has_new_version=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-        fi
-        echo "has_new_version=true" >> $GITHUB_OUTPUT
-        BUILD_TIME=${{ needs.Set_BuildTime.outputs.BUILD_TIME }}
-        echo Build Time:$BUILD_TIME
-        wget -nv -O CHANGELOG https://${{ env.MIKRO_UPGRADE_URL }}/routeros/$LATEST_VERSION/CHANGELOG
-        cat CHANGELOG
         echo "LATEST_VERSION=${LATEST_VERSION}" >> $GITHUB_ENV
-        echo "BUILD_TIME=${BUILD_TIME}" >> $GITHUB_ENV
-        if [ "${{ matrix.arch }}" == "x86" ]; then
-          ARCH=''
-          echo "ARCH=$ARCH" >> $GITHUB_ENV
-        elif [ "${{ matrix.arch }}" == "arm64" ]; then
-          ARCH='-arm64'
-          echo "ARCH=$ARCH" >> $GITHUB_ENV
-        fi
-
-
 
    
 
-    - name: Cache NetInstall ${{ env.LATEST_VERSION }}
-      if: steps.get_latest.outputs.has_new_version == 'true' && matrix.arch == 'x86'
-      id: cache-netinstall
-      uses: actions/cache@v4
-      with:
-        path: |
-          netinstall.zip
-          netinstall.tar.gz
-        key: netinstall-${{ env.LATEST_VERSION }}
 
-    - name: Get netinstall ${{ env.LATEST_VERSION }}
-      if: steps.get_latest.outputs.has_new_version == 'true' && matrix.arch == 'x86' && steps.cache-netinstall.outputs.cache-hit != 'true'
-      run: |
-        sudo wget -nv -O netinstall.zip https://download.mikrotik.com/routeros/$LATEST_VERSION/netinstall-$LATEST_VERSION.zip
-        sudo wget -nv -O netinstall.tar.gz https://download.mikrotik.com/routeros/$LATEST_VERSION/netinstall-$LATEST_VERSION.tar.gz
 
-    - name: Patch netinstall ${{ env.LATEST_VERSION }}
-      if: steps.get_latest.outputs.has_new_version == 'true' && matrix.arch == 'x86'
+     - name: Get netinstall-${{ env.LATEST_VERSION }}.zip
       run: |
-        sudo unzip netinstall.zip
+        sudo wget -nv -O netinstall-$LATEST_VERSION.zip https://download.mikrotik.com/routeros/$LATEST_VERSION/netinstall-$LATEST_VERSION.zip
+        sudo unzip netinstall-$LATEST_VERSION.zip
+        sudo rm netinstall-$LATEST_VERSION.zip
+
+    - name: Patch netinstall.exe
+      run: |
         sudo -E python3 patch.py netinstall netinstall.exe
         sudo zip netinstall-$LATEST_VERSION.zip ./netinstall.exe
-        sudo tar -xvf netinstall.tar.gz
-        sudo -E python3 patch.py netinstall netinstall-cli
-        sudo tar -czvf netinstall-$LATEST_VERSION.tar.gz ./netinstall-cli
 
+    
+        
+    - name: Get mikrotik-${{ env.LATEST_VERSION }}-mmips.npk
+      run: |
+        sudo wget -nv -O routeros-$LATEST_VERSION-mmips.npk https://download.mikrotik.com/routeros/$LATEST_VERSION/routeros-$LATEST_VERSION-mmips.npk
 
-
+    - name: Patch mikrotik-${{ env.LATEST_VERSION }}-mmips.npk
+      run: |
+        sudo -E python3 patch.py npk routeros-$LATEST_VERSION-mmips.npk
+        sudo zip routeros-$LATEST_VERSION-mmips.zip routeros-$LATEST_VERSION-mmips.npk
 
    
 
