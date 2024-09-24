@@ -40,13 +40,10 @@ jobs:
   Patch_RouterOS:
     needs: Set_BuildTime
     runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        arch: [mmips]
-        channel: [stable, testing]
+
     env:
       TZ: 'Asia/Shanghai'
-      LATEST_VERSION: ""
+      LATEST_VERSION: "7.15.3"
       ARCH: ""
 
     steps:
@@ -60,16 +57,6 @@ jobs:
 
 
 
-    - name: Get latest routeros version  
-      run: |
-        echo $(uname -a)
-        if [ "${{ inputs.version }}" == "" ]; then
-          LATEST_VERSION=$(wget -nv -O - ${{ env.LATEST_VERSION_URL }}${{ matrix.channel }} | cut -d ' ' -f1)
-        else
-          LATEST_VERSION=${{ inputs.version }}
-        fi
-        echo Latest Version:$LATEST_VERSION
-        echo "LATEST_VERSION=${LATEST_VERSION}" >> $GITHUB_ENV
 
    
 
