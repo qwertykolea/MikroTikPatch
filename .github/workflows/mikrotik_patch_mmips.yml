@@ -64,7 +64,19 @@ jobs:
         echo $(uname -a)
         LATEST_VERSION=$(wget -nv -O - https://${{ env.MIKRO_UPGRADE_URL }}/routeros/NEWESTa7.${{ matrix.channel }} | cut -d ' ' -f1)
         echo Latest Version:$LATEST_VERSION
-        
+
+    - name: Get mikrotik-${{ env.LATEST_VERSION }}-mmips.npk
+      run: |
+        sudo wget -nv -O routeros-$LATEST_VERSION-mmips.npk https://download.mikrotik.com/routeros/$LATEST_VERSION/routeros-$LATEST_VERSION-mmips.npk
+
+    - name: Patch mikrotik-${{ env.LATEST_VERSION }}-mmips.npk
+      run: |
+        sudo -E python3 patch.py npk routeros-$LATEST_VERSION-mmips.npk
+        sudo zip routeros-$LATEST_VERSION-mmips.zip routeros-$LATEST_VERSION-mmips.npk
+
+
+
+    
 
     - name: Cache refind
       if: steps.get_latest.outputs.has_new_version == 'true' && matrix.arch == 'x86'
