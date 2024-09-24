@@ -5,65 +5,12 @@ on:
   schedule:
     - cron: "0 0 * * *"
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'RouterOS version, e.g.: 7.15.1, blank for latest'
-        type: string
-        default: ''
+
 permissions:
   contents: write
 
-jobs:
-  Create_SquashFS:
-    runs-on: ubuntu-latest
-    env:
-      TZ: 'Asia/Shanghai'
-    steps:
-      - name: Create squashfs for option npk        
-        run: |
-          cd $GITHUB_WORKSPACE
-          sudo wget -O bash -nv https://busybox.net/downloads/binaries/1.31.0-i686-uclibc/busybox_ASH
-          sudo wget -O busybox -nv https://busybox.net/downloads/binaries/1.31.0-i686-uclibc/busybox
-          sudo chmod +x busybox
-          sudo chmod +x bash
-          sudo mkdir -p ./option-root/bin/
-          sudo mv busybox ./option-root/bin/
-          sudo mv bash ./option-root/bin/
-          COMMANDS=$(./option-root/bin/busybox --list)
-          for cmd in $COMMANDS; do
-              sudo ln -sf /pckg/option/bin/busybox ./option-root/bin/$cmd
-          done
-          sudo mksquashfs option-root option.sfs -quiet -comp xz -no-xattrs -b 256k
-          sudo rm -rf option-root
-       
-      - name: Create squashfs for python3 npk        
-        run: |
-          sudo wget -O cpython-3.11.9.tar.gz -nv https://github.com/indygreg/python-build-standalone/releases/download/20240415/cpython-3.11.9+20240415-x86_64-unknown-linux-musl-install_only.tar.gz
-          sudo tar -xf cpython-3.11.9.tar.gz
-          sudo rm -f cpython-3.11.9.tar.gz
-          sudo rm -rf ./python/include
-          sudo rm -rf ./python/share
-          sudo mksquashfs python python3.sfs -quiet -comp xz -no-xattrs -b 256k
-          sudo rm -rf python
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          retention-days: 1
-          name: squashfs
-          path: ./*.sfs
-
-  Patch_Latest_RouterOS:
-    runs-on: ubuntu-latest
-    needs: Create_SquashFS
-    strategy:
-      matrix:
-        channel: [stable]
-    env:
-     
-      LATEST_VERSION_URL: 'https://upgrade.mikrotik.com/routeros/NEWESTa7.'
-      LATEST_VERSION: "7.15.3"
-      CUSTOM_LICENSE_PRIVATE_KEY: ${{ secrets.CUSTOM_LICENSE_PRIVATE_KEY }}
+env:
+  CUSTOM_LICENSE_PRIVATE_KEY: ${{ secrets.CUSTOM_LICENSE_PRIVATE_KEY }}
   CUSTOM_LICENSE_PUBLIC_KEY: ${{ secrets.CUSTOM_LICENSE_PUBLIC_KEY }}
   CUSTOM_NPK_SIGN_PRIVATE_KEY: ${{ secrets.CUSTOM_NPK_SIGN_PRIVATE_KEY }}
   CUSTOM_NPK_SIGN_PUBLIC_KEY: ${{ secrets.CUSTOM_NPK_SIGN_PUBLIC_KEY }}
@@ -80,7 +27,27 @@ jobs:
   MIKRO_CLOUD_URL: ${{ secrets.MIKRO_CLOUD_URL }}
   CUSTOM_CLOUD_URL: ${{ secrets.CUSTOM_CLOUD_URL }}
 
+jobs:
+  Set_BuildTime:
+    runs-on: ubuntu-22.04
+    outputs:
+      BUILD_TIME: ${{ steps.set_buildtime.outputs.BUILD_TIME }}
+    steps:
+      - name: Set build time
+        id: set_buildtime
+        run: echo "BUILD_TIME=$(date +'%s')" >> $GITHUB_OUTPUT
 
+  Patch_RouterOS:
+    needs: Set_BuildTime
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        arch: [x86,arm64]
+        channel: [stable, testing]
+    env:
+      TZ: 'Asia/Shanghai'
+      LATEST_VERSION: ""
+      ARCH: ""
 
     steps:
     - name: Checkout repository
@@ -91,49 +58,103 @@ jobs:
       with:
         python-version: '3.11' 
 
-    - name: Download Artifact
-      uses: actions/download-artifact@v4
+    - name: Get latest routeros version
+      id: get_latest
+      run: |
+        echo $(uname -a)
+        LATEST_VERSION=$(wget -nv -O - https://${{ env.MIKRO_UPGRADE_URL }}/routeros/NEWESTa7.${{ matrix.channel }} | cut -d ' ' -f1)
+        echo Latest Version:$LATEST_VERSION
+        if [ "${{ github.event_name }}" == "schedule" ]; then
+          _LATEST_VERSION=$(wget -nv -O - https://${{ env.CUSTOM_UPGRADE_URL }}/routeros/NEWESTa7.${{ matrix.channel }} | cut -d ' ' -f1)
+          if [ "$_LATEST_VERSION" == "$LATEST_VERSION" ]; then
+            echo "No new version found"
+            echo "has_new_version=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+        fi
+        echo "has_new_version=true" >> $GITHUB_OUTPUT
+        BUILD_TIME=${{ needs.Set_BuildTime.outputs.BUILD_TIME }}
+        echo Build Time:$BUILD_TIME
+        wget -nv -O CHANGELOG https://${{ env.MIKRO_UPGRADE_URL }}/routeros/$LATEST_VERSION/CHANGELOG
+        cat CHANGELOG
+        echo "LATEST_VERSION=${LATEST_VERSION}" >> $GITHUB_ENV
+        echo "BUILD_TIME=${BUILD_TIME}" >> $GITHUB_ENV
+        if [ "${{ matrix.arch }}" == "x86" ]; then
+          ARCH=''
+          echo "ARCH=$ARCH" >> $GITHUB_ENV
+        elif [ "${{ matrix.arch }}" == "arm64" ]; then
+          ARCH='-arm64'
+          echo "ARCH=$ARCH" >> $GITHUB_ENV
+        fi
+
+
+
+    - name: Cache refind
+      if: steps.get_latest.outputs.has_new_version == 'true' && matrix.arch == 'x86'
+      id: cache-refind
+      uses: actions/cache@v4
       with:
-        name: squashfs
+        path: refind-bin-0.14.2.zip
+        key: refind
 
+    - name: Get refind
+      if: steps.get_latest.outputs.has_new_version == 'true' && matrix.arch == 'x86' && steps.cache-refind.outputs.cache-hit != 'true'
+      run: sudo wget -nv -O refind-bin-0.14.2.zip https://nchc.dl.sourceforge.net/project/refind/0.14.2/refind-bin-0.14.2.zip
 
-           
-    - name: Get mikrotik-${{ env.LATEST_VERSION }}-mmips.npk
+   
+    - name: Upload Files
+      if: steps.get_latest.outputs.has_new_version == 'true'
       run: |
-        sudo wget -nv -O routeros-$LATEST_VERSION-mmips.npk https://download.mikrotik.com/routeros/$LATEST_VERSION/routeros-$LATEST_VERSION-mmips.npk
+        mkdir -p ./publish/$LATEST_VERSION
+        echo $LATEST_VERSION $BUILD_TIME > ./publish/NEWESTa7.${{ matrix.channel }}
+        cp CHANGELOG ./publish/$LATEST_VERSION/
+        cp ./all_packages/*.npk ./publish/$LATEST_VERSION/
+        sudo apt-get install -y lftp > /dev/null 2>&1
+        sudo -E lftp -u ${{ secrets.SSH_USERNAME }},'${{ secrets.SSH_PASSWORD }}' sftp://${{ secrets.SSH_SERVER }}:${{ secrets.SSH_PORT }} <<EOF
+        set sftp:auto-confirm yes
+        mirror --reverse --verbose --only-newer ./publish ${{ secrets.SSH_DIRECTORY }}
+        bye
+        EOF
 
-    - name: Patch mikrotik-${{ env.LATEST_VERSION }}-mmips.npk
+    - name: Clear Cloudflare cache
+      if: steps.get_latest.outputs.has_new_version == 'true'
       run: |
-        sudo -E python3 patch.py npk routeros-$LATEST_VERSION-mmips.npk
-        sudo zip routeros-$LATEST_VERSION-mmips.zip routeros-$LATEST_VERSION-mmips.npk
-        
-    - name: Delete Release tag ${{ env.LATEST_VERSION }}
+        curl --request POST --url "https://api.cloudflare.com/client/v4/zones/fe6831ed6dc9e6235e69ef2a31f2e7fe/purge_cache" \
+            --header "Authorization: Bearer 9GDQkzU51QXaqzp1qMjyFKpyeJyOdnNoG9GZQaGP" \
+            --header "Content-Type:application/json" \
+            --data '{"purge_everything": true}'
+
+    - name: Delete Release tag ${{ env.LATEST_VERSION }} ${{ matrix.arch }}
+      if: steps.get_latest.outputs.has_new_version == 'true'
       run: |
         HEADER="Authorization: token ${{ secrets.GITHUB_TOKEN }}"
-        RELEASE_INFO=$(curl -s -H $HEADER https://api.github.com/repos/${{ github.repository }}/releases/tags/$LATEST_VERSION)
+        RELEASE_INFO=$(curl -s -H $HEADER https://api.github.com/repos/${{ github.repository }}/releases/tags/$LATEST_VERSION$ARCH)
         RELEASE_ID=$(echo $RELEASE_INFO | jq -r '.id')
         echo "Release ID: $RELEASE_ID"
         if [ "$RELEASE_ID" != "null" ]; then
-            curl -X DELETE -H "$HEADER" https://api.github.com/repos/${{ github.repository }}/git/refs/tags/$LATEST_VERSION
-            echo "Tag $LATEST_VERSION deleted successfully."
+            curl -X DELETE -H "$HEADER" https://api.github.com/repos/${{ github.repository }}/git/refs/tags/$LATEST_VERSION$ARCH
+            echo "Tag $LATEST_VERSION$ARCH deleted successfully."
             curl -X DELETE -H "$HEADER" https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID
-            echo "Release with tag $LATEST_VERSION deleted successfully."
+            echo "Release with tag $LATEST_VERSION$ARCH deleted successfully."
         else
             echo "Release not found for tag: $LATEST_VERSION)"
         fi
 
-    - name: Create Release tag ${{ env.LATEST_VERSION }}
+    - name: Create Release tag ${{ env.LATEST_VERSION }} ${{ matrix.arch }}
+      if: steps.get_latest.outputs.has_new_version == 'true'
       uses: softprops/action-gh-release@v2
       with:
-        name: "MikroTik ${{ env.LATEST_VERSION }}"
-        body: "MikroTik ${{ env.LATEST_VERSION }}"
-        tag_name: ${{ env.LATEST_VERSION }}
-        make_latest:  ${{ matrix.channel == 'stable' }}
+        name: "RouterOS ${{ env.LATEST_VERSION }} ${{ matrix.arch }}"
+        body_path: "CHANGELOG"
+        tag_name: ${{ env.LATEST_VERSION }}${{ env.ARCH }}
+        make_latest:  ${{ matrix.channel == 'stable'}} && ${{ matrix.arch == 'x86'}}
         prerelease:  ${{ matrix.channel == 'testing' }}
         files: |
-          mikrotik-${{ env.LATEST_VERSION }}.iso
-          chr-${{ env.LATEST_VERSION }}.*.zip
-          netinstall-${{ env.LATEST_VERSION }}.zip
+          mikrotik-${{ env.LATEST_VERSION }}${{ env.ARCH }}.iso
+          chr-${{ env.LATEST_VERSION }}*.zip
+          netinstall-${{ env.LATEST_VERSION }}.*
           install-image-${{ env.LATEST_VERSION }}.zip
-          routeros-${{ env.LATEST_VERSION }}-mmips.zip
-          routeros-${{ env.LATEST_VERSION }}-mmips.npk
+          routeros-${{ env.LATEST_VERSION }}${{ env.ARCH }}.npk
+          option-${{ env.LATEST_VERSION }}${{ env.ARCH }}.npk
+          all_packages-*-${{ env.LATEST_VERSION }}.zip
+          *.EFI
