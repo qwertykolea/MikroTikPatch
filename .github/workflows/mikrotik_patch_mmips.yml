@@ -72,7 +72,7 @@ jobs:
       MIKRO_LICENCE_URL: ${{ secrets.MIKRO_LICENCE_URL }}
       CUSTOM_LICENCE_URL: ${{ secrets.CUSTOM_LICENCE_URL }}
       MIKRO_UPGRADE_URL: 'upgrade.mikrotik.com'
-      LATEST_VERSION=: '7.15.3'
+      LATEST_VERSION: '7.15.3'
 
 
     steps:
