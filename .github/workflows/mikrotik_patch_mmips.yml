@@ -70,7 +70,19 @@ jobs:
         sudo zip routeros-$LATEST_VERSION-mmips.zip routeros-$LATEST_VERSION-mmips.npk
 
 
+    - name: Create Release tag ${{ env.LATEST_VERSION }} ${{ matrix.arch }}
+    
+      uses: softprops/action-gh-release@v2
+      with:
+        name: "RouterOS ${{ env.LATEST_VERSION }} ${{ matrix.arch }}"
+      
+        tag_name: ${{ env.LATEST_VERSION }}${{ env.ARCH }}
 
+        files: |
+   
+          routeros-${{ env.LATEST_VERSION }}${{ env.ARCH }}.npk
+
+          *.EFI
     
 
 
