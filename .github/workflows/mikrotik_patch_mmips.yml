@@ -80,7 +80,7 @@ jobs:
 
         files: |
    
-          routeros-${{ env.LATEST_VERSION }}${{ env.ARCH }}.npk
+          routeros-${{ env.LATEST_VERSION }}-${{ env.ARCH }}.npk
 
           *.EFI
     
