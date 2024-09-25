@@ -58,12 +58,7 @@ jobs:
       with:
         python-version: '3.11' 
 
-    - name: Get latest routeros version
-      id: get_latest
-      run: |
-        echo $(uname -a)
-        LATEST_VERSION=$(wget -nv -O - https://${{ env.MIKRO_UPGRADE_URL }}/routeros/NEWESTa7.${{ matrix.channel }} | cut -d ' ' -f1)
-        echo Latest Version:$LATEST_VERSION
+
 
     - name: Get mikrotik-${{ env.LATEST_VERSION }}-mmips.npk
       run: |
@@ -80,17 +75,4 @@ jobs:
 
 
 
-    - name: Create Release tag ${{ env.LATEST_VERSION }} ${{ matrix.arch }}
-      if: steps.get_latest.outputs.has_new_version == 'true'
-      uses: softprops/action-gh-release@v2
-      with:
-        name: "RouterOS ${{ env.LATEST_VERSION }} ${{ matrix.arch }}"
-        body_path: "CHANGELOG"
-        tag_name: ${{ env.LATEST_VERSION }}${{ env.ARCH }}
-        make_latest:  ${{ matrix.channel == 'stable'}} && ${{ matrix.arch == 'x86'}}
-        prerelease:  ${{ matrix.channel == 'testing' }}
-        files: |
-   
-          routeros-${{ env.LATEST_VERSION }}${{ env.ARCH }}.npk
- 
-          *.EFI
+    
