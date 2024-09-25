@@ -46,8 +46,8 @@ jobs:
         channel: [stable]
     env:
       TZ: 'Asia/Shanghai'
-      LATEST_VERSION: "7.15.3"
-      ARCH: ""
+      LATEST_VERSION: ""
+      ARCH: "mmips"
 
     steps:
     - name: Checkout repository
