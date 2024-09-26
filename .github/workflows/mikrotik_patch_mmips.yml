@@ -10,10 +10,10 @@ permissions:
   contents: write
 
 env:
-  CUSTOM_LICENSE_PRIVATE_KEY: 'C293CED638A2A33C681FC8DE98EE26C54EADC5390C2DFCE197D35C83C416CF59'
-  CUSTOM_LICENSE_PUBLIC_KEY: '8E1067E4305FCDC0CFBF95C10F96E5DFE8C49AEF486BD1A4E2E96C27F01E3E32'
-  CUSTOM_NPK_SIGN_PRIVATE_KEY: 'C293CED638A2A33C681FC8DE98EE26C54EADC5390C2DFCE197D35C83C416CF59'
-  CUSTOM_NPK_SIGN_PUBLIC_KEY: 'C293CED638A2A33C681FC8DE98EE26C54EADC5390C2DFCE197D35C83C416CF59'
+  CUSTOM_LICENSE_PRIVATE_KEY: '123'
+  CUSTOM_LICENSE_PUBLIC_KEY: '123'
+  CUSTOM_NPK_SIGN_PRIVATE_KEY: '123'
+  CUSTOM_NPK_SIGN_PUBLIC_KEY: '123'
   CUSTOM_CLOUD_PUBLIC_KEY: ${{ secrets.CUSTOM_CLOUD_PUBLIC_KEY }}
   MIKRO_LICENSE_PUBLIC_KEY: '8E1067E4305FCDC0CFBF95C10F96E5DFE8C49AEF486BD1A4E2E96C27F01E3E32'
   MIKRO_NPK_SIGN_PUBLIC_LKEY: 'C293CED638A2A33C681FC8DE98EE26C54EADC5390C2DFCE197D35C83C416CF59'
@@ -60,14 +60,14 @@ jobs:
 
 
 
-    - name: Get mikrotik-${{ env.LATEST_VERSION }}-mmips.npk
+    - name: Get mikrotik-${{ env.LATEST_VERSION }}-${{ env.ARCH }}.npk
       run: |
-        sudo wget -nv -O routeros-$LATEST_VERSION-mmips.npk https://download.mikrotik.com/routeros/$LATEST_VERSION/routeros-$LATEST_VERSION-mmips.npk
+        sudo wget -nv -O routeros-$LATEST_VERSION-${{ env.ARCH }}.npk https://download.mikrotik.com/routeros/$LATEST_VERSION/routeros-$LATEST_VERSION-${{ env.ARCH }}.npk
 
-    - name: Patch mikrotik-${{ env.LATEST_VERSION }}-mmips.npk
+    - name: Patch mikrotik-${{ env.LATEST_VERSION }}-${{ env.ARCH }}.npk
       run: |
-        sudo -E python3 patch.py npk routeros-$LATEST_VERSION-mmips.npk
-        sudo zip routeros-$LATEST_VERSION-mmips.zip routeros-$LATEST_VERSION-mmips.npk
+        sudo -E python3 patch.py npk routeros-$LATEST_VERSION-${{ env.ARCH }}.npk
+        sudo zip routeros-$LATEST_VERSION-${{ env.ARCH }}.zip routeros-$LATEST_VERSION-${{ env.ARCH }}.npk
 
 
     - name: Create Release tag ${{ env.LATEST_VERSION }} ${{ matrix.arch }}
