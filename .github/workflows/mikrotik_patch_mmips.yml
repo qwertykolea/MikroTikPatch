@@ -105,6 +105,7 @@ jobs:
         files: |
    
           routeros-${{ env.LATEST_VERSION }}-${{ env.ARCH }}.npk
+          netinstall-${{ env.LATEST_VERSION }}.*
 
           *.EFI
     
