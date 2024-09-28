@@ -103,7 +103,7 @@ jobs:
     
       uses: softprops/action-gh-release@v2
       with:
-        name: "RouterOS ${{ env.LATEST_VERSION }} ${{ matrix.arch }}"
+        name: "RouterOS ${{ env.LATEST_VERSION }} ${{ env.ARCH }}"
       
         tag_name: ${{ env.LATEST_VERSION }}${{ env.ARCH }}
 
