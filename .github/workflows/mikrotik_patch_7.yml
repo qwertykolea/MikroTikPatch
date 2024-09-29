@@ -282,7 +282,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         name: "RouterOS ${{ env.LATEST_VERSION }} ${{ matrix.arch }}"
-        body_path: "CHANGELOG"
+        #body_path: "CHANGELOG"
         tag_name: ${{ env.LATEST_VERSION }}${{ env.ARCH }}
         make_latest:  ${{ matrix.channel == 'stable'}} && ${{ matrix.arch == 'x86'}}
         prerelease:  ${{ matrix.channel == 'testing' }}
