@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        arch: [mmips]
+        arch: [x86]
         channel: [stable]
     env:
       TZ: 'Asia/Shanghai'
