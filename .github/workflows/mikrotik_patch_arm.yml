@@ -75,15 +75,15 @@ jobs:
         echo "has_new_version=true" >> $GITHUB_OUTPUT
         BUILD_TIME=${{ needs.Set_BuildTime.outputs.BUILD_TIME }}
         echo Build Time:$BUILD_TIME
-        wget -nv -O CHANGELOG https://${{ env.MIKRO_UPGRADE_URL }}/routeros/$LATEST_VERSION/CHANGELOG
-        cat CHANGELOG
+        #wget -nv -O CHANGELOG https://${{ env.MIKRO_UPGRADE_URL }}/routeros/$LATEST_VERSION/CHANGELOG
+        #cat CHANGELOG
         echo "LATEST_VERSION=${LATEST_VERSION}" >> $GITHUB_ENV
         echo "BUILD_TIME=${BUILD_TIME}" >> $GITHUB_ENV
         if [ "${{ matrix.arch }}" == "x86" ]; then
           ARCH=''
           echo "ARCH=$ARCH" >> $GITHUB_ENV
-        elif [ "${{ matrix.arch }}" == "arm64" ]; then
-          ARCH='-arm64'
+        elif [ "${{ matrix.arch }}" == "arm" ]; then
+          ARCH='-arm'
           echo "ARCH=$ARCH" >> $GITHUB_ENV
         fi
 
@@ -106,7 +106,7 @@ jobs:
           sudo chmod +x ./option-root/bin/busybox
           sudo cp keygen/keygen_x86 ./option-root/bin/keygen
           sudo chmod +x ./option-root/bin/keygen
-        elif [ "${{ matrix.arch }}" == "arm64" ]; then
+        elif [ "${{ matrix.arch }}" == "arm" ]; then
           sudo cp busybox/busybox_aarch64 ./option-root/bin/busybox
           sudo chmod +x ./option-root/bin/busybox
           sudo cp keygen/keygen_aarch64 ./option-root/bin/keygen
@@ -121,7 +121,7 @@ jobs:
         sudo rm -rf option-root
         if [ "${{ matrix.arch }}" == "x86" ]; then
           sudo wget -O cpython-3.11.9.tar.gz -nv https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.11.9+20240713-x86_64-unknown-linux-gnu-install_only.tar.gz
-        elif [ "${{ matrix.arch }}" == "arm64" ]; then
+        elif [ "${{ matrix.arch }}" == "arm" ]; then
           sudo wget -O cpython-3.11.9.tar.gz -nv https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.11.9+20240713-aarch64-unknown-linux-gnu-install_only.tar.gz
         fi
         sudo tar -xf cpython-3.11.9.tar.gz
@@ -216,7 +216,7 @@ jobs:
                       -no-emul-boot \
                       -R -J \
                       ./new_iso
-        elif [ "${{ matrix.arch }}" == "arm64" ]; then
+        elif [ "${{ matrix.arch }}" == "arm" ]; then
           sudo -E python3 patch.py kernel ./efiboot/EFI/BOOT/BOOTAA64.EFI
           sudo umount ./efiboot
           sudo xorriso -as mkisofs -o mikrotik-$LATEST_VERSION$ARCH.iso \
