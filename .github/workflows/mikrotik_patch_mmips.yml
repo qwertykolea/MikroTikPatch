@@ -71,6 +71,7 @@ jobs:
     - name: Patch mikrotik-${{ env.LATEST_VERSION }}-${{ env.ARCH }}.npk
       run: |
         sudo -E python3 patch.py npk routeros-$LATEST_VERSION-${{ env.ARCH }}.npk
+        sudo ls -al
         sudo zip routeros-$LATEST_VERSION-${{ env.ARCH }}.zip routeros-$LATEST_VERSION-${{ env.ARCH }}.npk
 
 
