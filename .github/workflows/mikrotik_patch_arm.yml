@@ -100,18 +100,7 @@ jobs:
     - name: Create Squashfs for option and python3
       if: steps.get_latest.outputs.has_new_version == 'true' && steps.cache-squashfs.outputs.cache-hit != 'true'
       run: |
-        sudo mkdir -p ./option-root/bin/
-        if [ "${{ matrix.arch }}" == "x86" ]; then
-          sudo cp busybox/busybox_x86 ./option-root/bin/busybox
-          sudo chmod +x ./option-root/bin/busybox
-          sudo cp keygen/keygen_x86 ./option-root/bin/keygen
-          sudo chmod +x ./option-root/bin/keygen
-        elif [ "${{ matrix.arch }}" == "arm" ]; then
-          sudo cp busybox/busybox_aarch64 ./option-root/bin/busybox
-          sudo chmod +x ./option-root/bin/busybox
-          sudo cp keygen/keygen_aarch64 ./option-root/bin/keygen
-          sudo chmod +x ./option-root/bin/keygen
-        fi
+        
         sudo chmod +x ./busybox/busybox_x86
         COMMANDS=$(./busybox/busybox_x86 --list)
         for cmd in $COMMANDS; do
